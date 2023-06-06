@@ -1,0 +1,62 @@
+version: '3'
+services:
+  mosquitto:
+    build: ./mosquitto
+    restart: always
+    environment:
+      MQTT_USERNAME: bmetk
+      MQTT_PASSWORD: iot23
+    ports:
+      - 1883:1883
+
+  postgres:
+    image: postgres:15.2-alpine3.17
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: user
+      POSTGRES_DB: db
+    volumes:
+      - ./database-volume:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+
+  pgadmin:
+    image: dpage/pgadmin4:2023-06-05-1
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: example@example.com
+      PGADMIN_DEFAULT_PASSWORD: password
+    volumes:
+      - ./pgadmin4-servers.json:/pgadmin4/servers.json
+    depends_on:
+      - postgres
+    ports:
+      - 5050:80
+
+  backend:
+    build: ./backend
+    restart: always
+    environment:
+      MQTT_HOSTNAME: mosquitto
+      MQTT_USERNAME: bmetk
+      MQTT_PASSWORD: iot23
+      MQTT_PORT: 1883
+      PORT: 8000
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: user
+      POSTGRES_DB: db
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: postgres
+    depends_on:
+      - postgres
+    ports:
+      - 8000:8000
+
+  frontend:
+    build: ./frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - 80:80

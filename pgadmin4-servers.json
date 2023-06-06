@@ -1,0 +1,12 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "IoT Data Collecting Platform",
+      "Group": "Servers",
+      "Port": 5432,
+      "Username": "user",
+      "Host": "postgres",
+      "MaintenanceDB": "db"
+    }
+  }
+}
