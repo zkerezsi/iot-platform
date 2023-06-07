@@ -1,6 +1,13 @@
 {
+  "python.linting.enabled": true,
+  "python.linting.mypyEnabled": true,
+  "python.formatting.provider": "none",
+  "python.formatting.autopep8Args": [
+    "--indent-size=4",
+    "--max-line-length=120"
+  ],
+  "editor.formatOnSave": true,
   "[python]": {
     "editor.defaultFormatter": "ms-python.autopep8"
-  },
-  "python.formatting.provider": "none"
+  }
 }

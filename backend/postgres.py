@@ -7,20 +7,7 @@ from datetime import datetime
 from config import logger, postgres_db, postgres_host, postgres_password, postgres_port, postgres_user
 
 
-class Bno055Value(typing.TypedDict):
-    frequency: list[float]
-    x_axis: list[float]
-    y_axis: list[float]
-    z_axis: list[float]
-
-
-pool: typing.Optional[aiopg.Pool]
-
-
-async def is_postgres_healthy():
-    global pool
-    if pool is None:
-        return False
+async def is_postgres_healthy(pool: aiopg.Pool) -> bool:
     try:
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -31,13 +18,13 @@ async def is_postgres_healthy():
         return False
 
 
-async def postgres_context(_: web.Application) -> typing.AsyncIterator[None]:
+async def postgres_context(app: web.Application) -> typing.AsyncIterator[None]:
     async with aiopg.create_pool(user=postgres_user,
                                  database=postgres_db,
                                  host=postgres_host,
                                  port=postgres_port,
-                                 password=postgres_password) as p:
-        async with p.acquire() as conn:
+                                 password=postgres_password) as pool:
+        async with pool.acquire() as conn:
             async with conn.cursor() as cur:
                 create_table = '''
                 CREATE TABLE IF NOT EXISTS sensor_data(
@@ -52,12 +39,11 @@ async def postgres_context(_: web.Application) -> typing.AsyncIterator[None]:
                 CREATE INDEX IF NOT EXISTS _timestamp_index ON sensor_data USING BRIN(_timestamp);
                 '''
                 await cur.execute(create_index)
-        global pool
-        pool = p
+        app["pool"] = pool
         yield
 
 
-async def insert_bno055_data(raw_bytes: bytes) -> None:
+async def insert_bno055_data(pool: aiopg.Pool, raw_bytes: bytes) -> None:
     if len(raw_bytes) != 1024:
         logger.error(
             'Invalid number of bytes received from bno055: should be 1024')
@@ -83,7 +69,6 @@ async def insert_bno055_data(raw_bytes: bytes) -> None:
                              x_axis=x_axis,
                              y_axis=y_axis,
                              z_axis=z_axis))
-    global pool
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
             command = '''
@@ -92,8 +77,14 @@ async def insert_bno055_data(raw_bytes: bytes) -> None:
             await cur.execute(command, (_sensor, _measurement, _value))
 
 
-async def get_bno055_data(timestamp: datetime):
-    global pool
+class Bno055Value(typing.TypedDict):
+    frequency: list[float]
+    x_axis: list[float]
+    y_axis: list[float]
+    z_axis: list[float]
+
+
+async def get_bno055_data(pool: aiopg.Pool, timestamp: datetime) -> tuple[datetime, str, str, Bno055Value]:
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
             command = '''

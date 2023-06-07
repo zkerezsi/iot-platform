@@ -9,8 +9,8 @@ from postgres import postgres_context
 if __name__ == '__main__':
     logger.info(f"Starting backend service on http://localhost:{port}")
     app = web.Application()
-    app.cleanup_ctx.append(mqtt_context)
     app.cleanup_ctx.append(postgres_context)
+    app.cleanup_ctx.append(mqtt_context)
     cors = aiohttp_cors.setup(app, defaults={
         "*": aiohttp_cors.ResourceOptions(
             allow_credentials=True,
